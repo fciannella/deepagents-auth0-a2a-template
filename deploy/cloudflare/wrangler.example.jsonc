@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "replace-with-unique-agent-name",
+  "main": "worker.js",
+  "workers_dev": true,
+  "preview_urls": false,
+  "compatibility_date": "2026-11-10",
+  "containers": [
+    {
+      "class_name": "AgentContainer",
+      "scheduling_policy": "durable_object",
+      "images": {
+        "agent": { "dockerfile": "../../Dockerfile", "build_context": "../.." }
+      }
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "AGENT", "class_name": "AgentContainer" }]
+  },
+  "exports": {
+    "AgentContainer": { "type": "durable-object", "storage": "sqlite" }
+  },
+  "r2_buckets": [
+    { "binding": "STATE", "bucket_name": "replace-with-unique-agent-state" }
+  ],
+  "vars": {
+    "PUBLIC_GATEWAY_READY": "false",
+    "PUBLIC_ORIGIN": "https://your-agent.example",
+    "AUTH0_REDIRECT_URI": "https://your-agent.example/",
+    "AUTH0_DOMAIN": "your-tenant.us.auth0.com",
+    "AUTH0_CLIENT_ID": "configure-me",
+    "AUTH0_AUDIENCE": "https://your-agent.example/api",
+    "AUTH0_REQUIRED_SCOPES": "agent:chat",
+    "CORS_ORIGINS": "[]",
+    "AGENT_ID": "generic-assistant",
+    "AGENT_NAME": "Deep Agent",
+    "AGENT_DESCRIPTION": "A configurable text assistant.",
+    "AGENT_VERSION": "0.1.0",
+    "MODEL_BASE_URL": "https://openrouter.ai/api/v1",
+    "MODEL_NAME": "google/gemini-3.1-flash-lite"
+  }
+}

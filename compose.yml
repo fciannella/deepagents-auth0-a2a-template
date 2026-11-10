@@ -1,0 +1,22 @@
+name: deepagents-a2a
+services:
+  agent:
+    build: .
+    image: deepagents-auth0-a2a:local
+    ports:
+      - "127.0.0.1:9183:9173"
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - agent-data:/data
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    stop_grace_period: 150s
+volumes:
+  agent-data:

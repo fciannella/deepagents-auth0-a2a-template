@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cloudflare Agent Deploy"
+  short_description: "Build and host authenticated agents on Cloudflare"
+  default_prompt: "Use $cloudflare-agent-deploy to build and deploy an agent from this project on Cloudflare."

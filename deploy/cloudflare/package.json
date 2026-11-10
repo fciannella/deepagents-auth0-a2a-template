@@ -1,0 +1,12 @@
+{
+  "name": "deepagents-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy --durable-objects-code-update-mode immediate"
+  },
+  "devDependencies": {
+    "wrangler": "4.160.0"
+  }
+}

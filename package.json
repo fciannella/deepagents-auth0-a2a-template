@@ -1,0 +1,10 @@
+{
+  "name": "deepagents-a2a-ui",
+  "private": true,
+  "scripts": {
+    "vendor": "mkdir -p app/static/vendor && cp node_modules/@auth0/auth0-spa-js/dist/auth0-spa-js.production.js app/static/vendor/auth0.js"
+  },
+  "dependencies": {
+    "@auth0/auth0-spa-js": "2.19.0"
+  }
+}

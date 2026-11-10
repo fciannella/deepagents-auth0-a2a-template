@@ -1,0 +1,23 @@
+name: Test and build
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.11"
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: uv sync --frozen
+      - run: npm ci && npm run vendor
+      - run: uv run ruff check app agent tests scripts
+      - run: uv run ruff format --check app agent tests scripts
+      - run: uv run pytest -q
+      - run: node --check app/static/app.js && node --test deploy/cloudflare/worker.test.mjs
+      - run: docker build -t deepagents-a2a:ci .

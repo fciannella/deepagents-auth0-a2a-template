@@ -1,0 +1,103 @@
+import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+
+// Bump revision whenever the image or container environment must change.
+const settings = __SETTINGS__;
+
+export class StorageBridge extends WorkerEntrypoint {
+  async fetch(request) {
+    if (new URL(request.url).pathname !== "/runtime.sqlite") return new Response(null, { status: 404 });
+    if (!this.env.JOURNAL) return new Response(null, { status: 503 });
+    if (request.method === "GET") {
+      const object = await this.env.JOURNAL.get("runtime.sqlite");
+      return object ? new Response(object.body) : new Response(null, { status: 404 });
+    }
+    if (request.method === "PUT") {
+      await this.env.JOURNAL.put("runtime.sqlite", request.body);
+      return new Response(null, { status: 204 });
+    }
+    return new Response(null, { status: 405 });
+  }
+}
+
+export class AgentRuntime extends DurableObject {
+  starting;
+
+  constructor(ctx, env) {
+    super(ctx, env);
+    if (ctx.container?.running) {
+      ctx.blockConcurrencyWhile(async () => {
+        await this.configureContainer();
+        await ctx.container.setInactivityTimeout(settings.idleMs);
+      });
+      this.observeExit();
+    }
+  }
+
+  async configureContainer() {
+    if (this.env.JOURNAL) {
+      await this.ctx.container.interceptOutboundHttp("storage.internal", this.ctx.exports.StorageBridge({}));
+    }
+  }
+
+  observeExit() {
+    this.ctx.waitUntil(this.ctx.container.monitor().catch(() => console.error("Agent container exited with an error")));
+  }
+
+  async ready() {
+    const container = this.ctx.container;
+    await this.configureContainer();
+    if (container.running && await this.ctx.storage.get("runtimeRevision") !== settings.revision) {
+      container.signal(15);
+      await container.monitor();
+    }
+    if (!container.running) {
+      const env = Object.fromEntries(settings.envNames
+        .filter(key => typeof this.env[key] === "string")
+        .map(key => [key, this.env[key]]));
+      container.start({ image: container.images.agent, instance: settings.instance, enableInternet: true, env });
+      await this.ctx.storage.put("runtimeRevision", settings.revision);
+      this.observeExit();
+    }
+    await container.setInactivityTimeout(settings.idleMs);
+    for (let attempt = 0; attempt < 120; attempt++) {
+      try {
+        const response = await container.getTcpPort(settings.port).fetch(
+          `http://container${settings.healthPath}`, { signal: AbortSignal.timeout(1000) });
+        const healthy = response.status === 200;
+        if (response.body) await response.body.cancel();
+        if (healthy) return;
+      } catch { /* Readiness only: never retry a caller's agent action here. */ }
+      await scheduler.wait(500);
+    }
+    throw new Error("Agent startup did not become healthy");
+  }
+
+  async fetch(request) {
+    this.starting ??= this.ready().finally(() => { this.starting = undefined; });
+    await this.starting;
+    const url = new URL(request.url);
+    url.protocol = "http:";
+    url.host = "container";
+    const forwarded = new Request(url, request);
+    forwarded.headers.delete("host");
+    return this.ctx.container.getTcpPort(settings.port).fetch(forwarded);
+  }
+}
+
+export default {
+  async fetch(request, env) {
+    // Enable only after the container's public gateway validates caller auth.
+    if (env.PUBLIC_GATEWAY_READY !== "true") {
+      return new Response("Agent gateway setup is incomplete", { status: 503 });
+    }
+    if (new URL(request.url).pathname === "/runtime.sqlite") return new Response(null, { status: 404 });
+    try {
+      // One database writer per deployment. Do not vary this by untrusted input.
+      return await env.AGENT.getByName("agent-runtime").fetch(request);
+    } catch {
+      // Internal errors must not leak provider credentials or filesystem paths.
+      console.error("Agent gateway request failed");
+      return new Response("Agent temporarily unavailable", { status: 503 });
+    }
+  },
+};

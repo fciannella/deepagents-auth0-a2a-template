@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Deep Agent</title>
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/vendor/auth0.js" defer></script>
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <aside>
+      <div class="brand">◈ <span id="brand">Deep Agent</span></div>
+      <p class="muted">Your conversations</p>
+      <button id="new" disabled>＋ New conversation</button>
+      <nav id="contexts" aria-label="Conversation history"></nav>
+      <button id="more" hidden>Load more</button
+      ><small>Private to your signed-in account.</small>
+    </aside>
+    <main>
+      <header>
+        <span id="description">A configurable text assistant.</span
+        ><button id="login" disabled>Connecting…</button
+        ><button id="logout" hidden>Sign out</button>
+      </header>
+      <section id="welcome">
+        <span class="eyebrow">A PLACE TO START</span>
+        <h1>What would you like<br />to work on?</h1>
+        <p>Ask a question, explore an idea, or start a task.</p>
+      </section>
+      <section
+        id="messages"
+        aria-label="Conversation"
+        aria-live="polite"
+      ></section>
+      <footer>
+        <p id="notice" role="status">Connecting to your agent…</p>
+        <form id="composer">
+          <label for="message">Your message</label
+          ><textarea
+            id="message"
+            placeholder="Write a message…"
+            rows="3"
+            maxlength="12000"
+            disabled
+          ></textarea
+          ><button id="send" disabled>Send ↗</button>
+        </form>
+        <small>Enter to send · Shift + Enter for a new line</small>
+      </footer>
+    </main>
+  </body>
+</html>
